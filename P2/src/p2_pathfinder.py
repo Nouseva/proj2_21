@@ -1,3 +1,5 @@
+from collections import deque
+
 
 def find_path (source_point, destination_point, mesh):
 
@@ -26,8 +28,11 @@ def find_path (source_point, destination_point, mesh):
     box_dest   = find_box(destination_point, mesh['boxes'])
 
     # print(box_source, box_dest)
-    path.append(box_dest)
-    path.append(box_source)
+    # path.append(box_dest)
+    # path.append(box_source)
+
+    path = bfs(box_source, box_dest, mesh['adj'])
+    print(path)
 
 
     return [source_point, destination_point], path
@@ -65,3 +70,54 @@ def find_box(point, boxes):
 
                 return box
     return None
+
+
+# SEARCHES
+def bfs(source_node, dest_node, graph):
+    """
+    Arguments:
+    source_node - starting node of the search
+    dest_node   - when node is reached, search is complete
+    graph       - a dictionary of adjacent nodes
+                    { n1: [ n2, n3, ...], n2: [n1, n4, ...], ... }
+
+    Returns:
+
+        A list of nodes that form a path from source to destination,
+        if there is no path then an empty list is returned
+
+    """
+
+    visited = {}
+    path    = []
+
+    # Elements are (node, parent)
+    queue = deque()
+    queue.append((source_node, None))
+
+    while queue:
+        node, parent = queue.pop()
+        # Skip nodes that have been previously explored
+        if node in visited:
+            continue
+
+        visited[node] = parent
+
+        # Search complete
+        if node == dest_node:
+            print('found path')
+            path.append(node)
+
+            while parent:
+                node = parent
+                parent = visited.get(node)
+                path.append(node)
+
+            path.reverse()
+            return path
+
+
+        # Add all adjacent nodes to the queue
+        queue.extend([ (n, node) for n in graph[node] ])
+
+    return path
