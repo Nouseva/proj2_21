@@ -32,7 +32,7 @@ def find_path (source_point, destination_point, mesh):
     # path.append(box_source)
 
     path = bfs(box_source, box_dest, mesh['adj'])
-    print(path)
+    # print(path)
 
 
     return [source_point, destination_point], path
@@ -96,7 +96,7 @@ def bfs(source_node, dest_node, graph):
     queue.append((source_node, None))
 
     while queue:
-        node, parent = queue.pop()
+        node, parent = queue.popleft()
         # Skip nodes that have been previously explored
         if node in visited:
             continue
@@ -105,7 +105,6 @@ def bfs(source_node, dest_node, graph):
 
         # Search complete
         if node == dest_node:
-            print('found path')
             path.append(node)
 
             while parent:
@@ -113,6 +112,7 @@ def bfs(source_node, dest_node, graph):
                 parent = visited.get(node)
                 path.append(node)
 
+            # nodes are added from tail to head
             path.reverse()
             return path
 
