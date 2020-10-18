@@ -3,7 +3,7 @@ from heapq import heappop, heappush
 from math import sqrt
 
 
-# TODO: Fix decide how and implement fix of boxes having xy flip
+# TODO: Fix bug where path is found in one direction, but not other
 
 def find_path (source_point, destination_point, mesh):
 
@@ -22,33 +22,29 @@ def find_path (source_point, destination_point, mesh):
         """
 
     path = []
+    points_path = []
     boxes = {}
 
-    box_source = None
-    box_dest   = None
+    # box_source = None
+    # box_dest   = None
 
     # Simple individual search, can be combined into search for both
-    box_source = find_box(source_point, mesh['boxes'])
-    box_dest   = find_box(destination_point, mesh['boxes'])
+    # box_source = find_box(source_point, mesh['boxes'])
+    # box_dest   = find_box(destination_point, mesh['boxes'])
 
-    #print("Source:", source_point)
-    #print("Source box:", box_source)
-    #print("Destination:", destination_point)
-
-    # print(box_source, box_dest)
-    # path.append(box_dest)
-    # path.append(box_source)
-    if(box_source and box_dest):
+    # if(box_source and box_dest):
+    if (source_point, destination_point):
         #path = bfs(box_source, box_dest, mesh['adj'])
         path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
-        print('\n')
+        # print('\n')
 
     # print(path)
 
     # Print there is no path if path is empty
-    if not path or not box_source or not box_dest:
+    if not path:
         print("No Path!!")
 
+    # print('boxes', path)
     return points_path, path
     #return path, boxes.keys()
 
@@ -153,6 +149,9 @@ def dsp(initial_position, destination, graph, adj):
     box_source = find_box(initial_position, graph['boxes'])
     box_dest   = find_box(destination, graph['boxes'])
 
+    if box_source is None or box_dest is None:
+        return [], []
+
     # The priority queue
     queue = [(0, box_source, initial_position)]
 
@@ -189,13 +188,12 @@ def dsp(initial_position, destination, graph, adj):
             current_parent_point = detail_points[current_point]
             i = 0
             while current_parent_point is not None and i < 1000:
-                print(current_parent_point)
                 i += 1
                 detail_points_path.append(current_parent_point)
                 current_parent_point = detail_points[current_parent_point]
 
-            print('initial:', initial_position, 'goal:', destination)
-            print('point path:', detail_points_path)
+            # print('initial:', initial_position, 'goal:', destination)
+            # print('point path:', detail_points_path)
             return path[::-1], detail_points_path[::-1]
 
         # Calculate cost from current note to all the adjacent ones
@@ -204,7 +202,7 @@ def dsp(initial_position, destination, graph, adj):
 
             adj_edge = get_detail_range(current_box, adj_box)
             adj_point = get_closest_detail_point(current_point, adj_edge)
-            print('point:', adj_point)
+            # print('point:', adj_point)
             # print(current_node, 'to', adj_node)
             # print(adj_edge, '\n')
 
@@ -212,10 +210,13 @@ def dsp(initial_position, destination, graph, adj):
             if adj_box not in distances or pathcost < distances[adj_box]:
                 distances[adj_box] = pathcost
                 backpointers[adj_box] = current_box
+
+            # in case boxes overlap
+            if adj_point not in detail_points:
                 detail_points[adj_point] = current_point
                 heappush(queue, (pathcost, adj_box, adj_point))
 
-    return None
+    return [], []
 
 def box_mid(box_s):
     y1, y2, x1, x2 = box_s
@@ -263,6 +264,10 @@ def get_detail_range(box_source, box_dest):
     x_max = min(xs2, xd2)
     y_min = max(ys1, yd1)
     y_max = min(ys2, yd2)
+
+    # print('Boxes', box_source, box_dest)
+    # print('Edge', (y_min, y_max, x_min, x_max))
+
 
     return (y_min, y_max, x_min, x_max)
 
