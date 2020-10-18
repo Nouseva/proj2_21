@@ -30,16 +30,19 @@ def find_path (source_point, destination_point, mesh):
     # Simple individual search, can be combined into search for both
     box_source = find_box(source_point, mesh['boxes'])
     box_dest   = find_box(destination_point, mesh['boxes'])
+    
+    #print("Source:", source_point)
+    #print("Source box:", box_source)
+    #print("Destination:", destination_point)
 
     # print(box_source, box_dest)
     # path.append(box_dest)
     # path.append(box_source)
     if(box_source and box_dest):
-        path = bfs(box_source, box_dest, mesh['adj'])
-
-    # path = bfs(box_source, box_dest, mesh['adj'])
-    path = dsp(box_source, box_dest, mesh['adj'], get_box_costs)
-    print('\n')
+        #path = bfs(box_source, box_dest, mesh['adj'])
+        path = dsp(source_point, destination_point, mesh, get_box_costs)
+        print('\n')
+    
     # print(path)
 
     # Print there is no path if path is empty
@@ -66,18 +69,18 @@ def find_box(point, boxes):
 
     """
 
-    x, y = point
+    y, x = point
 
     # Check that the point has non-negative values
-    if x < 0 or y < 0:
+    if y < 0 or x < 0:
         return None
 
     # assume boxes are valid 4-tuples
     for box in boxes:
-        x1, x2, y1, y2 = box
+        y1, y2, x1, x2 = box
 
-        if x1 <= x and x <= x2:
-            if y1 <= y and y <= y2:
+        if y1 <= y and y <= y2:
+            if x1 <= x and x <= x2:
 
                 return box
     return None
@@ -137,65 +140,72 @@ def dsp(initial_position, destination, graph, adj):
     """ Searches for a minimal cost path through a graph using Dijkstra's algorithm.
 
     Args:
-        initial_position: The initial cell from which the path extends.
-        destination: The end location for the path.
-        graph: A loaded level, containing walls, spaces, and waypoints.
-        adj: An adjacency function returning cells adjacent to a given cell as well as their respective edge costs.
+        initial_position: The initial box from which the path extends. 4-tuple: (y1, y2, x1, x2)
+        destination: The end box for the path. 4-tuple: (y1, y2, x1, x2)
+        graph: Adj dict of neighboring boxes to a box
+        adj: Closest box function returning box list of boxes and their cost to reach from intitial position.
 
     Returns:
         If a path exits, return a list containing all cells from initial_position to destination.
         Otherwise, return None.
 
     """
+    box_source = find_box(initial_position, graph['boxes'])
+    box_dest   = find_box(destination, graph['boxes'])
+
     # The priority queue
-    queue = [(0, initial_position)]
+    queue = [(0, box_source)]
 
     # The dictionary that will be returned with the costs
     distances = {}
-    distances[initial_position] = 0
+    distances[box_source] = 0
 
     # The dictionary that will store the backpointers
     backpointers = {}
-    backpointers[initial_position] = None
+    backpointers[box_source] = None
+
+    # The dictionary that will store the detail points of the path key: (y,x); value:(y,x)
+    detail_points = {}
+    detail_points[initial_position] = None
 
     while queue:
-        current_dist, current_node = heappop(queue)
+        current_dist, current_box = heappop(queue)
 
         # Check if current node is the destination
-        if current_node == destination:
+        if current_box == box_dest:
 
             # List containing all cells from initial_position to destination
-            path = [current_node]
+            path = [current_box]
 
             # Go backwards from destination until the source using backpointers
             # and add all the nodes in the shortest path into a list
-            current_back_node = backpointers[current_node]
-            while current_back_node is not None:
-                path.append(current_back_node)
-                current_back_node = backpointers[current_back_node]
+            current_back_box = backpointers[current_box]
+            while current_back_box is not None:
+                path.append(current_back_box)
+                current_back_box = backpointers[current_back_box]
 
             return path[::-1]
 
         # Calculate cost from current note to all the adjacent ones
-        for adj_node, adj_node_cost in adj(graph, current_node):
-            pathcost = current_dist + adj_node_cost
+        for adj_box, adj_box_cost in adj(graph["adj"], current_box):
+            pathcost = current_dist + adj_box_cost
 
             ## TODO: use shared edge detection for something
-            adj_edge = get_detail_range(current_node, adj_node)
-            print(current_node, 'to', adj_node)
-            print(adj_edge, '\n')
+            adj_edge = get_detail_range(current_box, adj_box)
+            # print(current_node, 'to', adj_node)
+            # print(adj_edge, '\n')
 
             # If the cost is new
-            if adj_node not in distances or pathcost < distances[adj_node]:
-                distances[adj_node] = pathcost
-                backpointers[adj_node] = current_node
-                heappush(queue, (pathcost, adj_node))
+            if adj_box not in distances or pathcost < distances[adj_box]:
+                distances[adj_box] = pathcost
+                backpointers[adj_box] = current_box
+                heappush(queue, (pathcost, adj_box))
 
     return None
 
 def box_mid(box_s):
-    x1, x2, y1, y2 = box_s
-    return (x2-x1, y2-y1)
+    y1, y2, x1, x2 = box_s
+    return ((y2+y1)/2, (x2+x1)/2)
 
 def dist_linear(point_s, point_d):
     x1, y1 = point_s
@@ -240,4 +250,4 @@ def get_detail_range(box_source, box_dest):
     y_min = max(ys1, yd1)
     y_max = min(ys2, yd2)
 
-    return (x_min, x_max, y_min, y_max)
+    return (y_min, y_max, x_min, x_max)
