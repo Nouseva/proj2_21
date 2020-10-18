@@ -30,7 +30,7 @@ def find_path (source_point, destination_point, mesh):
     # Simple individual search, can be combined into search for both
     box_source = find_box(source_point, mesh['boxes'])
     box_dest   = find_box(destination_point, mesh['boxes'])
-    
+
     #print("Source:", source_point)
     #print("Source box:", box_source)
     #print("Destination:", destination_point)
@@ -42,7 +42,7 @@ def find_path (source_point, destination_point, mesh):
         #path = bfs(box_source, box_dest, mesh['adj'])
         path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
         print('\n')
-    
+
     # print(path)
 
     # Print there is no path if path is empty
@@ -188,21 +188,23 @@ def dsp(initial_position, destination, graph, adj):
             
             current_parent_point = detail_points[current_point]
             i = 0
-            while current_parent_point is not None and i < 5:
+            while current_parent_point is not None and i < 1000:
                 print(current_parent_point)
                 i += 1
                 detail_points_path.append(current_parent_point)
                 current_parent_point = detail_points[current_parent_point]
 
+            print('initial:', initial_position, 'goal:', destination)
+            print('point path:', detail_points_path)
             return path[::-1], detail_points_path[::-1]
 
         # Calculate cost from current note to all the adjacent ones
         for adj_box, adj_box_cost in adj(graph["adj"], current_box):
             pathcost = current_dist + adj_box_cost
 
-            ## TODO: use shared edge detection for something
             adj_edge = get_detail_range(current_box, adj_box)
-            adj_point = (adj_edge[0],adj_edge[2])
+            adj_point = get_closest_detail_point(current_point, adj_edge)
+            print('point:', adj_point)
             # print(current_node, 'to', adj_node)
             # print(adj_edge, '\n')
 
@@ -263,3 +265,22 @@ def get_detail_range(box_source, box_dest):
     y_max = min(ys2, yd2)
 
     return (y_min, y_max, x_min, x_max)
+
+def get_closest_detail_point(source_point, detail_range):
+
+    yr1, yr2, xr1, xr2 = detail_range
+    ys, xs = source_point
+
+    # Find which axis the range is constant for
+    if yr1 == yr2:
+        line = [xs, xr1, xr2]
+        line.sort()
+
+        return (yr1, line[1])
+
+    # xr1 == xr2
+    else:
+        line = [ys, yr1, yr2]
+        line.sort()
+
+        return (line[1], xr1)
