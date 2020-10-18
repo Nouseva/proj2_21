@@ -40,7 +40,7 @@ def find_path (source_point, destination_point, mesh):
     # path.append(box_source)
     if(box_source and box_dest):
         #path = bfs(box_source, box_dest, mesh['adj'])
-        path = dsp(source_point, destination_point, mesh, get_box_costs)
+        path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
         print('\n')
     
     # print(path)
@@ -49,7 +49,7 @@ def find_path (source_point, destination_point, mesh):
     if not path or not box_source or not box_dest:
         print("No Path!!")
 
-    return [source_point, destination_point], path
+    return points_path, path
     #return path, boxes.keys()
 
 
@@ -154,7 +154,7 @@ def dsp(initial_position, destination, graph, adj):
     box_dest   = find_box(destination, graph['boxes'])
 
     # The priority queue
-    queue = [(0, box_source)]
+    queue = [(0, box_source, initial_position)]
 
     # The dictionary that will be returned with the costs
     distances = {}
@@ -169,11 +169,10 @@ def dsp(initial_position, destination, graph, adj):
     detail_points[initial_position] = None
 
     while queue:
-        current_dist, current_box = heappop(queue)
+        current_dist, current_box, current_point = heappop(queue)
 
         # Check if current node is the destination
         if current_box == box_dest:
-
             # List containing all cells from initial_position to destination
             path = [current_box]
 
@@ -184,7 +183,18 @@ def dsp(initial_position, destination, graph, adj):
                 path.append(current_back_box)
                 current_back_box = backpointers[current_back_box]
 
-            return path[::-1]
+            # build detail_points_path
+            detail_points_path = [destination, current_point]
+            
+            current_parent_point = detail_points[current_point]
+            i = 0
+            while current_parent_point is not None and i < 5:
+                print(current_parent_point)
+                i += 1
+                detail_points_path.append(current_parent_point)
+                current_parent_point = detail_points[current_parent_point]
+
+            return path[::-1], detail_points_path[::-1]
 
         # Calculate cost from current note to all the adjacent ones
         for adj_box, adj_box_cost in adj(graph["adj"], current_box):
@@ -192,6 +202,7 @@ def dsp(initial_position, destination, graph, adj):
 
             ## TODO: use shared edge detection for something
             adj_edge = get_detail_range(current_box, adj_box)
+            adj_point = (adj_edge[0],adj_edge[2])
             # print(current_node, 'to', adj_node)
             # print(adj_edge, '\n')
 
@@ -199,7 +210,8 @@ def dsp(initial_position, destination, graph, adj):
             if adj_box not in distances or pathcost < distances[adj_box]:
                 distances[adj_box] = pathcost
                 backpointers[adj_box] = current_box
-                heappush(queue, (pathcost, adj_box))
+                detail_points[adj_point] = current_point
+                heappush(queue, (pathcost, adj_box, adj_point))
 
     return None
 
