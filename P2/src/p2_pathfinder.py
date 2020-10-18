@@ -30,10 +30,13 @@ def find_path (source_point, destination_point, mesh):
     # print(box_source, box_dest)
     # path.append(box_dest)
     # path.append(box_source)
-
-    path = bfs(box_source, box_dest, mesh['adj'])
+    if(box_source and box_dest):
+        path = bfs(box_source, box_dest, mesh['adj'])
     # print(path)
 
+    # Print there is no path if path is empty
+    if not path or not box_source or not box_dest:
+        print("No Path!!")
 
     return [source_point, destination_point], path
     #return path, boxes.keys()
