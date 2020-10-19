@@ -35,7 +35,8 @@ def find_path (source_point, destination_point, mesh):
     # if(box_source and box_dest):
     if (source_point, destination_point):
         #path = bfs(box_source, box_dest, mesh['adj'])
-        path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
+        # path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
+        path, points_path = a_star(source_point, destination_point, mesh, get_box_costs, dist_linear)
         # print('\n')
 
     # print(path)
@@ -218,6 +219,93 @@ def dsp(initial_position, destination, graph, adj):
 
     return [], []
 
+
+def a_star(initial_position, destination, graph, adj, heuristic):
+    """ Searches for a minimal cost path through a graph using A* algorithm.
+
+    Args:
+        initial_position: The initial box from which the path extends. 4-tuple: (y1, y2, x1, x2)
+        destination: The end box for the path. 4-tuple: (y1, y2, x1, x2)
+        graph: Adj dict of neighboring boxes to a box
+        adj: Closest box function returning box list of boxes and their cost to reach from intitial position.
+        heuristic: function that gives an estimate of distance remaining between two positions
+
+    Returns:
+        If a path exits, return a list containing all cells from initial_position to destination.
+        Otherwise, return None.
+
+    """
+    box_source = find_box(initial_position, graph['boxes'])
+    box_dest   = find_box(destination, graph['boxes'])
+
+    if box_source is None or box_dest is None:
+        return [], []
+
+    # The priority queue
+    queue = [(0, box_source, initial_position)]
+
+    # The dictionary that will be returned with the costs
+    distances = {}
+    distances[box_source] = 0
+
+    # The dictionary that will store the backpointers
+    backpointers = {}
+    backpointers[box_source] = None
+
+    # The dictionary that will store the detail points of the path key: (y,x); value:(y,x)
+    detail_points = {}
+    detail_points[initial_position] = None
+
+    # Maps boxes to a point which is the closest to its preceeding point
+    d_points = {}
+    d_points[box_source] = initial_position
+
+    while queue:
+        current_dist, current_box, current_point = heappop(queue)
+
+        # Check if current node is the destination
+        if current_box == box_dest:
+            # List containing all cells from initial_position to destination
+            path = [current_box]
+            detail_points_path = [destination, current_point]
+
+            # Go backwards from destination until the source using backpointers
+            # and add all the nodes in the shortest path into a list
+            current_back_box = backpointers[current_box]
+            current_parent_point = d_points[current_box]
+
+            while current_back_box is not None:
+                path.append(current_back_box)
+                detail_points_path.append(current_parent_point)
+                current_parent_point = d_points[current_back_box]
+
+                current_back_box = backpointers[current_back_box]
+
+
+            # print('initial:', initial_position, 'goal:', destination)
+            # print('point path:', detail_points_path)
+            return path[::-1], detail_points_path[::-1]
+
+        # Calculate cost from current note to all the adjacent ones
+        for adj_box, adj_box_cost in adj(graph["adj"], current_box):
+            pathcost = current_dist + adj_box_cost
+
+            adj_edge = get_detail_range(current_box, adj_box)
+            adj_point = get_closest_detail_point(current_point, adj_edge)
+            # print('point:', adj_point)
+            # print(current_node, 'to', adj_node)
+            # print(adj_edge, '\n')
+
+            # If the cost is new
+            if adj_box not in distances or pathcost < distances[adj_box]:
+                distances[adj_box] = pathcost
+                backpointers[adj_box] = current_box
+
+                d_points[adj_box] = current_point
+                heappush(queue, (pathcost, adj_box, adj_point))
+
+    return [], []
+
 def box_mid(box_s):
     y1, y2, x1, x2 = box_s
     return ((y2+y1)/2, (x2+x1)/2)
@@ -229,6 +317,8 @@ def dist_linear(point_s, point_d):
     dist = sqrt(abs(x1-x2) + abs(y1-y2))
 
     return dist
+
+#### COST FUNCTIONS ####
 
 def get_box_costs(graph, box_source, cost_function=dist_linear):
     """
@@ -249,6 +339,8 @@ def get_box_costs(graph, box_source, cost_function=dist_linear):
 
     return list(zip(adj_boxes, adj_costs))
 
+
+### /COST FUNCTIONS ####
 
 def get_detail_range(box_source, box_dest):
     """
