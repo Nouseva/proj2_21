@@ -3,7 +3,7 @@ from heapq import heappop, heappush
 from math import sqrt
 
 
-# TODO: Fix bug where path is found in one direction, but not other
+# TODO: Have A* solve from both ends
 
 def find_path (source_point, destination_point, mesh):
 
@@ -36,7 +36,7 @@ def find_path (source_point, destination_point, mesh):
     if (source_point, destination_point):
         #path = bfs(box_source, box_dest, mesh['adj'])
         # path, points_path = dsp(source_point, destination_point, mesh, get_box_costs)
-        path, points_path = a_star(source_point, destination_point, mesh, get_box_costs, dist_linear)
+        path, points_path = a_star(source_point, destination_point, mesh, dist_linear, dist_linear)
         # print('\n')
 
     # print(path)
@@ -220,15 +220,15 @@ def dsp(initial_position, destination, graph, adj):
     return [], []
 
 
-def a_star(initial_position, destination, graph, adj, heuristic):
+def a_star(initial_position, destination, graph, func_cost, func_heur):
     """ Searches for a minimal cost path through a graph using A* algorithm.
 
     Args:
         initial_position: The initial box from which the path extends. 4-tuple: (y1, y2, x1, x2)
         destination: The end box for the path. 4-tuple: (y1, y2, x1, x2)
         graph: Adj dict of neighboring boxes to a box
-        adj: Closest box function returning box list of boxes and their cost to reach from intitial position.
-        heuristic: function that gives an estimate of distance remaining between two positions
+        func_cost: function that gives the actual cost in traveling between two neighboring positions
+        func_heur: function that gives an estimate of distance remaining between two positions
 
     Returns:
         If a path exits, return a list containing all cells from initial_position to destination.
@@ -241,6 +241,7 @@ def a_star(initial_position, destination, graph, adj, heuristic):
     if box_source is None or box_dest is None:
         return [], []
 
+    dict_adj_box = graph['adj']
     # The priority queue
     queue = [(0, box_source, initial_position)]
 
@@ -252,16 +253,12 @@ def a_star(initial_position, destination, graph, adj, heuristic):
     backpointers = {}
     backpointers[box_source] = None
 
-    # The dictionary that will store the detail points of the path key: (y,x); value:(y,x)
-    detail_points = {}
-    detail_points[initial_position] = None
-
     # Maps boxes to a point which is the closest to its preceeding point
     d_points = {}
     d_points[box_source] = initial_position
 
     while queue:
-        current_dist, current_box, current_point = heappop(queue)
+        current_cost, current_box, current_point = heappop(queue)
 
         # Check if current node is the destination
         if current_box == box_dest:
@@ -281,28 +278,32 @@ def a_star(initial_position, destination, graph, adj, heuristic):
 
                 current_back_box = backpointers[current_back_box]
 
-
             # print('initial:', initial_position, 'goal:', destination)
             # print('point path:', detail_points_path)
             return path[::-1], detail_points_path[::-1]
 
-        # Calculate cost from current note to all the adjacent ones
-        for adj_box, adj_box_cost in adj(graph["adj"], current_box):
-            pathcost = current_dist + adj_box_cost
-
+        # else some box in between
+        adj_boxes = dict_adj_box[current_box]
+        for adj_box in adj_boxes:
             adj_edge = get_detail_range(current_box, adj_box)
             adj_point = get_closest_detail_point(current_point, adj_edge)
+
+            actual_path_cost = current_cost + func_cost(current_point, adj_point)
+
+            # Calculate cost as the distance actually traveled and how far to go from point
+            estimated_goal_cost = actual_path_cost + func_heur(current_point, destination)
+
             # print('point:', adj_point)
             # print(current_node, 'to', adj_node)
             # print(adj_edge, '\n')
 
-            # If the cost is new
-            if adj_box not in distances or pathcost < distances[adj_box]:
-                distances[adj_box] = pathcost
+            # If the cost is new then store
+            if adj_box not in distances or actual_path_cost < distances[adj_box]:
+                distances[adj_box] = actual_path_cost
                 backpointers[adj_box] = current_box
 
                 d_points[adj_box] = current_point
-                heappush(queue, (pathcost, adj_box, adj_point))
+                heappush(queue, (estimated_goal_cost, adj_box, adj_point))
 
     return [], []
 
