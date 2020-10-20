@@ -186,7 +186,7 @@ def dsp(initial_position, destination, graph, adj):
 
             # build detail_points_path
             detail_points_path = [destination, current_point]
-            
+
             current_parent_point = detail_points[current_point]
             i = 0
             while current_parent_point is not None and i < 1000:
@@ -336,21 +336,21 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
     # The dictionary that will be returned with the costs
     forward_distances = {}
     forward_distances[box_source] = 0
-    
+
     backward_distances = {}
     backward_distances[box_dest] = 0
 
     # The dictionary that will store the backpointers
     forward_backpointers = {}
     forward_backpointers[box_source] = None
-    
+
     backward_backpointers = {}
     backward_backpointers[box_dest] = None
 
     # Maps boxes to a point which is the closest to its preceeding point
     forward_d_points = {}
     forward_d_points[box_source] = initial_position
-    
+
     backward_d_points = {}
     backward_d_points[box_dest] = destination
 
@@ -358,21 +358,24 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
         current_cost, current_box, current_point, current_endpoint = heappop(queue)
 
         matched = False
-        
+
         # Check the headed direction of this box is toward the destination
         if(current_endpoint == destination):
             if(current_box in backward_backpointers.keys()):
                 matched = True
-        
+
         if(current_endpoint == initial_position):
             if(current_box in forward_backpointers.keys()):
                 matched = True
 
-        # Check if the backward pointers 
+        # Check if the backward pointers
         if matched:
+
+            #print('source', initial_position)
+            #print('dest', destination)
             # List containing all cells from initial_position to destination
             path = [current_box]
-            detail_points_path = [current_point]
+            detail_points_path = []
 
             # Go backwards from destination until the source using backpointers
             # and add all the nodes in the shortest path into a list
@@ -382,7 +385,7 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
             while current_back_box is not None:
                 path.append(current_back_box)
                 detail_points_path.append(current_parent_point)
-                
+
                 current_parent_point = forward_d_points[current_back_box]
                 current_back_box = forward_backpointers[current_back_box]
 
@@ -398,10 +401,13 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
             while current_back_box is not None:
                 path.append(current_back_box)
                 detail_points_path.append(current_parent_point)
-                
+
                 current_parent_point = backward_d_points[current_back_box]
                 current_back_box = backward_backpointers[current_back_box]
-                
+
+            detail_points_path.insert(0, (initial_position))
+            detail_points_path.append((destination))
+
             return path, detail_points_path
 
         # else some box in between
@@ -414,7 +420,7 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
 
             # Calculate cost as the distance actually traveled and how far to go from point
             estimated_goal_cost = actual_path_cost + func_heur(current_point, current_endpoint)
-            
+
             # print('point:', adj_point)
             # print(current_node, 'to', adj_node)
             # print(adj_edge, '\n')
@@ -424,13 +430,13 @@ def a_star_bidirectional(initial_position, destination, graph, func_cost, func_h
                 if adj_box not in forward_distances or actual_path_cost < forward_distances[adj_box]:
                     forward_distances[adj_box] = actual_path_cost
                     forward_backpointers[adj_box] = current_box
-                    forward_d_points[adj_box] = current_point
+                    forward_d_points[adj_box] = adj_point
                     heappush(queue, (estimated_goal_cost, adj_box, adj_point, current_endpoint))
             elif(current_endpoint == initial_position):
                 if adj_box not in backward_distances or actual_path_cost < backward_distances[adj_box]:
                     backward_distances[adj_box] = actual_path_cost
                     backward_backpointers[adj_box] = current_box
-                    backward_d_points[adj_box] = current_point
+                    backward_d_points[adj_box] = adj_point
                     heappush(queue, (estimated_goal_cost, adj_box, adj_point, current_endpoint))
             else:
                 print("Error: current_endpoint invalid", current_endpoint)
@@ -505,6 +511,7 @@ def get_closest_detail_point(source_point, detail_range):
         line = [xs, xr1, xr2]
         line.sort()
 
+        #print(yr1, line[1])
         return (yr1, line[1])
 
     # xr1 == xr2
@@ -513,3 +520,7 @@ def get_closest_detail_point(source_point, detail_range):
         line.sort()
 
         return (line[1], xr1)
+
+
+
+
